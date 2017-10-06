@@ -63,7 +63,7 @@ class GruModel:
     def teacher_should_force(self):
         return random.random() < self.teacher_force_ratio
 
-    def train_epoch(self, train_x, train_y):
+    def train_epoch(self, train_x, train_y, experiment=None):
         # type: (ndarray, ndarray) -> float
         """ Trains a single epoch. Returns training loss. """
         progress = tqdm(total=len(train_x))
@@ -74,6 +74,9 @@ class GruModel:
                        range(self.cfg.batch_size, len(train_x), self.cfg.batch_size))
 
         for start, end in idx_iter:
+            if start == end:
+                break
+
             x_batch = torch.LongTensor(train_x[start:end])
             y_batch = torch.LongTensor(train_y[start:end])
 
@@ -85,6 +88,10 @@ class GruModel:
                 Variable(x_batch.view(-1, self.cfg.batch_size)),
                 Variable(y_batch.view(-1, self.cfg.batch_size)),
             )
+
+            if experiment is not None:
+                experiment.log_metric('loss', loss)
+
             loss_queue.append(loss)
             progress.set_postfix(loss=np.mean(loss_queue), refresh=False)
             progress.update(self.cfg.batch_size)

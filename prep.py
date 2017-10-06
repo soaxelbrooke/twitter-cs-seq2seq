@@ -15,8 +15,10 @@ def prep():
         with open('data/x.txt', 'w') as x_out:
             with open('data/y.txt', 'w') as y_out:
                 for row in tqdm(rows):
-                    x_out.write(f'@{row[1]} {row[2]}\n')
-                    y_out.write(f'@{row[3]} {row[4]}\n')
+                    x_text = row[2].replace("\\n", "\\t")
+                    y_text = row[4].replace("\\n", "\\t")
+                    x_out.write(f'@{row[1]} {x_text}\n')
+                    y_out.write(f'@{row[3]} {y_text}\n')
 
 
 if __name__ == '__main__':
