@@ -73,7 +73,6 @@ class GruModel:
         idx_iter = zip(range(0, len(train_x) - self.cfg.batch_size, self.cfg.batch_size),
                        range(self.cfg.batch_size, len(train_x), self.cfg.batch_size))
 
-        minibatch_idx = 0
         for start, end in idx_iter:
             x_batch = train_x[start:end]
             y_batch = train_y[start:end]
@@ -93,13 +92,12 @@ class GruModel:
                 Variable(y_batch.view(-1, self.cfg.batch_size)),
             )
 
-            if experiment is not None and (minibatch_idx % 100) == 0:
+            if experiment is not None:
                 experiment.log_metric('loss', loss)
 
             loss_queue.append(loss)
             progress.set_postfix(loss=np.mean(loss_queue), refresh=False)
             progress.update(self.cfg.batch_size)
-            minibatch_idx += 1
 
         return np.mean(loss_queue)
 
