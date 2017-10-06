@@ -34,7 +34,7 @@ def train():
     for idx in range(1000):
         print("Training in epoch " + str(idx))
         # Don't report progress on first epoch...
-        model.train_epoch(x, y, experiment=experiment if idx > 0 else None)
+        model.train_epoch(x, y, experiment=experiment)
 
 
 def encoder_for_lines(cfg: Seq2SeqConfig, lines) -> Encoder:

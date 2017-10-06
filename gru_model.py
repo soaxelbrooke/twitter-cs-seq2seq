@@ -74,11 +74,11 @@ class GruModel:
                        range(self.cfg.batch_size, len(train_x), self.cfg.batch_size))
 
         for start, end in idx_iter:
-            if start == end:
-                break
-
             x_batch = torch.LongTensor(train_x[start:end])
             y_batch = torch.LongTensor(train_y[start:end])
+
+            if (len(x_batch) == 0) or (len(y_batch) == 0):
+                break
 
             if self.cfg.use_cuda:
                 x_batch = x_batch.cuda()
