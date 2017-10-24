@@ -20,6 +20,7 @@ Seq2SeqConfig = NamedTuple('Seq2SeqParams', (
     ('use_cuda', bool),
     ('vocab_size', int),
     ('start_token', str),
+    ('encoder_layers', int),
 ))
 
 
@@ -147,7 +148,7 @@ class GruEncoder(nn.Module):
         # type: (Seq2SeqConfig, nn.Embedding, int) -> None
         super(GruEncoder, self).__init__()
         self.cfg = seq2seq_params
-        self.n_layers = n_layers
+        self.n_layers = seq2seq_params.encoder_layers
 
         self.embedding = embedding
         self.rnn = nn.GRU(

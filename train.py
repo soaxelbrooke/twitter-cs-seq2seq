@@ -21,6 +21,7 @@ S2S_PARAMS = Seq2SeqConfig(
     use_cuda=True,
     vocab_size=2**13,
     start_token='__start__',
+    encoder_layers=int(os.environ.get('ENCODER_LAYERS', '2')),
 )
 
 
