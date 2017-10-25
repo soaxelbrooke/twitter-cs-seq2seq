@@ -17,9 +17,9 @@ import toolz
 
 
 S2S_PARAMS = Seq2SeqConfig(
-    message_len=30,
+    message_len=20,
     batch_size=int(os.environ.get('BATCH_SIZE', '32')),
-    context_size=200,
+    context_size=100,
     embed_size=200,
     use_cuda=True,
     vocab_size=2**13,
@@ -98,7 +98,8 @@ def bpe_encoder_for_lines(cfg: Seq2SeqConfig, lines) -> Encoder:
 
 
 def sklearn_encode_data(encoder, text, is_input=False):
-    encoded = np.ones((len(text), 30), dtype='int32') * (encoder.max_features + 1) # PAD value
+    encoded = np.ones((len(text), S2S_PARAMS.message_len),
+                      dtype='int32') * (encoder.max_features + 1) # PAD value
     unk = encoder.max_features
 
     unk_count = 0
@@ -110,7 +111,7 @@ def sklearn_encode_data(encoder, text, is_input=False):
     signature_regex = re.compile(r'[\*^/][a-z][a-z][a-z]?(?![\*])')
 
     for row_idx, line in enumerate(text):
-        for col_idx, token in enumerate(toolz.take(30, encoder.tokenizer(line))):
+        for col_idx, token in enumerate(toolz.take(S2S_PARAMS.message_len, encoder.tokenizer(line))):
             if token.startswith('@') and token not in encoder.vocabulary_:
                 at_count += 1
                 word_idx = encoder.vocabulary_[AT_TOKEN]
