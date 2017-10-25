@@ -39,7 +39,8 @@ def write_csv_from_db(out_path: str):
            reply.data ->> 'text' AS reply_text
         FROM tweets reply 
           INNER JOIN tweets request 
-          ON reply.data ->> 'in_reply_to_status_id' = request.status_id;
+          ON reply.data ->> 'in_reply_to_status_id' = request.status_id
+        WHERE request.data ->> 'in_reply_to_status_id' IS NULL;
     """
     conn = psycopg2.connect(dbname='twitter_cs')
     crs = conn.cursor()
