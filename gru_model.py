@@ -59,8 +59,8 @@ class GruModel:
         self.teacher_force_ratio = seq2seq_cfg.teacher_force_ratio
         self.learning_rate = seq2seq_cfg.learning_rate
 
-        self.encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=self.learning_rate)
-        self.decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=self.learning_rate)
+        self.encoder_optimizer = optim.RMSprop(self.encoder.parameters(), lr=self.learning_rate)
+        self.decoder_optimizer = optim.RMSprop(self.decoder.parameters(), lr=self.learning_rate)
         self.loss_fn = nn.NLLLoss()
 
     def teacher_should_force(self):
