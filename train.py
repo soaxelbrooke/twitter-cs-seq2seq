@@ -27,8 +27,8 @@ S2S_PARAMS = Seq2SeqConfig(
 
 
 def train():
-    x_lines = open('data/x.txt').read().split('\n')
-    y_lines = open('data/y.txt').read().split('\n')
+    x_lines = open('data/x.txt').read().split('\n')[:10000]
+    y_lines = open('data/y.txt').read().split('\n')[:10000]
 
     encoder = encoder_for_lines(S2S_PARAMS, x_lines + y_lines)
 

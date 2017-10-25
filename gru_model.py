@@ -69,13 +69,13 @@ class GruModel:
         # type: (ndarray, ndarray) -> float
         """ Trains a single epoch. Returns training loss. """
         progress = tqdm(total=len(train_x))
-        loss_queue = deque(maxlen=1000)
+        loss_queue = deque(maxlen=256)
         train_x = train_x.astype('int64')
         train_y = train_y.astype('int64')
         idx_iter = zip(range(0, len(train_x) - self.cfg.batch_size, self.cfg.batch_size),
                        range(self.cfg.batch_size, len(train_x), self.cfg.batch_size))
 
-        for start, end in idx_iter:
+        for step, (start, end) in enumerate(idx_iter):
             x_batch = train_x[start:end]
             y_batch = train_y[start:end]
 
@@ -94,7 +94,7 @@ class GruModel:
                 Variable(y_batch.view(-1, self.cfg.batch_size)),
             )
 
-            if experiment is not None:
+            if (experiment is not None) and ((step + 1) % 20 == 0):
                 experiment.log_metric('loss', loss)
 
             loss_queue.append(loss)
