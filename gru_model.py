@@ -161,7 +161,8 @@ class GruEncoder(nn.Module):
         embedded = self.embedding(word_idxs) \
             .view(self.cfg.message_len, self.cfg.batch_size, self.cfg.embed_size)
 
-        return self.rnn(embedded, hidden_state)
+        out, hidden = self.rnn(embedded, hidden_state)
+        return out[-1].unsqueeze(0), hidden[-1].unsqueeze(0)
 
     def init_hidden(self):
         hidden = Variable(torch.randn(self.n_layers, self.cfg.batch_size, self.cfg.context_size))
