@@ -95,7 +95,7 @@ class GruModel:
             )
 
             if (experiment is not None) and ((step + 1) % 20 == 0):
-                experiment.log_metric('loss', loss)
+                experiment.log_metric('loss', np.mean(loss_queue))
 
             loss_queue.append(loss)
             progress.set_postfix(loss=np.mean(loss_queue), refresh=False)
