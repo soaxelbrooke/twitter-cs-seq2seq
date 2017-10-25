@@ -22,13 +22,13 @@ S2S_PARAMS = Seq2SeqConfig(
     vocab_size=2**13,
     start_token='__start__',
     encoder_layers=int(os.environ.get('ENCODER_LAYERS', '2')),
-    learning_rate=float(os.environ.get('LEARNING_RATE', '0.5')),
+    learning_rate=float(os.environ.get('LEARNING_RATE', '0.005')),
 )
 
 
 def train():
-    x_lines = open('data/x.txt').read().split('\n')[:10000]
-    y_lines = open('data/y.txt').read().split('\n')[:10000]
+    x_lines = open('data/x.txt').read().split('\n')
+    y_lines = open('data/y.txt').read().split('\n')
 
     encoder = encoder_for_lines(S2S_PARAMS, x_lines + y_lines)
 
