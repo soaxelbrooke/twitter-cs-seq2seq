@@ -55,6 +55,7 @@ def train():
         for idx in range(1000):
             print("Training in epoch " + str(idx))
             model.train_epoch(x, y, experiment=experiment)
+            experiment.log_epoch_end(idx)
     else:
         for idx in range(1000):
             print("Training in epoch " + str(idx))
