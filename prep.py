@@ -20,10 +20,10 @@ def prep(mode: str):
         with open('data/x.txt', 'w') as x_out:
             with open('data/y.txt', 'w') as y_out:
                 for row in tqdm(rows):
-                    x_text = row[2].replace("\\n", "\\t")
-                    y_text = row[4].replace("\\n", "\\t")
-                    x_out.write(f'@{row[1]} {x_text}\n')
-                    y_out.write(f'@{row[3]} {y_text}\n')
+                    x_text = row[2].strip().replace("\n", " ")
+                    y_text = row[4].strip().replace("\n", " ")
+                    x_out.write(f'{x_text}\n')
+                    y_out.write(f'{y_text}\n')
 
 
 def write_csv_from_db(out_path: str):
