@@ -75,6 +75,8 @@ class GruModel:
         train_y = train_y.astype('int64')
         idx_iter = zip(range(0, len(train_x) - self.cfg.batch_size, self.cfg.batch_size),
                        range(self.cfg.batch_size, len(train_x), self.cfg.batch_size))
+        total_loss = 0
+        last_step = 1
 
         for step, (start, end) in enumerate(idx_iter):
             x_batch = train_x[start:end]
@@ -98,13 +100,16 @@ class GruModel:
             if (experiment is not None) and ((step + 1) % 20 == 0):
                 experiment.log_metric('loss', np.mean(loss_queue))
 
+            total_loss += loss
             loss_queue.append(loss)
             progress.set_postfix(loss=np.mean(loss_queue), refresh=False)
             progress.update(self.cfg.batch_size)
+            last_step = step + 1
 
+        avg_loss = total_loss / last_step
         if experiment is not None:
-            experiment.log_metric('loss', np.mean(loss_queue))
-        return np.mean(loss_queue)
+            experiment.log_metric('loss', avg_loss)
+        return avg_loss
 
     def _train_inner(self, input_var_batch, target_var_batch):
         # type: (ndarray, ndarray) -> float

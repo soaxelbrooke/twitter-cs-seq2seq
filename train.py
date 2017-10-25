@@ -62,6 +62,7 @@ def train():
     y = y[:S2S_PARAMS.batch_size*int(len(y)/S2S_PARAMS.batch_size)]
 
     test_x = x[:S2S_PARAMS.batch_size]
+    losses = []
 
     if USE_COMET:
         experiment = Experiment(api_key="DQqhNiimkjP0gK6c8iGz9orzL", log_code=True)
@@ -72,8 +73,9 @@ def train():
             x = x[random_idx]
             y = y[random_idx]
             print("Training in epoch " + str(idx))
-            model.train_epoch(x, y, experiment=experiment)
+            losses.append(model.train_epoch(x, y, experiment=experiment))
             experiment.log_epoch_end(idx)
+            print('Loss history: {}'.format(', '.join(['{:.4f}'.format(loss) for loss in losses])))
             test_y = model.predict(test_x)
             for i in range(min([3, S2S_PARAMS.batch_size])):
                 print('> ' + ' '.join(reverse_enc.get(idx, '<unk/>') for idx in list(test_y[i])))
