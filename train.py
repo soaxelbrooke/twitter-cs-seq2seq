@@ -19,18 +19,22 @@ S2S_PARAMS = Seq2SeqConfig(
     context_size=200,
     embed_size=200,
     use_cuda=True,
-    vocab_size=2**13,
-    start_token='__start__',
+    vocab_size=2**14,
+    start_token='<start/>',
     encoder_layers=int(os.environ.get('ENCODER_LAYERS', '2')),
     learning_rate=float(os.environ.get('LEARNING_RATE', '0.005')),
+    teacher_force_ratio=float(os.environ.get('TEACHER_FORCE', '0.5')),
 )
+
+AT_TOKEN = '<at/>'
+HASH_TOKEN = '<hashtag/>'
 
 LIMIT = int(os.environ.get('LIMIT', '10000000'))
 
 
 def train():
-    x_lines = [*toolz.take(LIMIT, open('data/x.txt').read().split('\n'))]
-    y_lines = [*toolz.take(LIMIT, open('data/y.txt').read().split('\n'))]
+    x_lines = [*toolz.take(LIMIT, open('data/x.txt').read().lower().split('\n'))]
+    y_lines = [*toolz.take(LIMIT, open('data/y.txt').read().lower().split('\n'))]
 
     encoder = encoder_for_lines(S2S_PARAMS, x_lines + y_lines)
 
@@ -64,27 +68,46 @@ def train():
 
 def sklearn_encoder_for_data(cfg: Seq2SeqConfig, lines):
     logging.info("Fitting sklearn count vectorizer...")
-    cv = CountVectorizer(tokenizer=casual_tokenize, max_features=cfg.vocab_size - 1)
-    cv.fit(lines + [cfg.start_token] * 100000)
+    cv = CountVectorizer(tokenizer=casual_tokenize, max_features=cfg.vocab_size - 2)
+    cv.fit(lines + [cfg.start_token] * 10000 + [AT_TOKEN] * 10000 + [HASH_TOKEN] * 10000)
     return cv
 
 
 def bpe_encoder_for_lines(cfg: Seq2SeqConfig, lines) -> Encoder:
     """ Calculate BPE encoder for provided lines of text """
-    encoder = Encoder(vocab_size=cfg.vocab_size, required_tokens=[cfg.start_token])
+    encoder = Encoder(vocab_size=cfg.vocab_size, required_tokens=[cfg.start_token, AT_TOKEN])
     encoder.fit(lines)
     encoder.save('latest_encoder.json')
     return encoder
 
 
 def sklearn_encode_data(encoder, text, is_input=False):
-    encoded = np.zeros((len(text), 30), dtype='int32')
+    encoded = np.ones((len(text), 30), dtype='int32') * (encoder.max_features + 1) # PAD value
     unk = encoder.max_features
+
+    unk_count = 0
+    at_count = 0
+    hash_count = 0
+    known_count = 0
 
     for row_idx, line in enumerate(text):
         for col_idx, token in enumerate(toolz.take(30, encoder.tokenizer(line))):
-            encoded[row_idx][col_idx] = encoder.vocabulary_.get(token, unk)
+            if token.startswith('@') and token not in encoder.vocabulary_:
+                at_count += 1
+                word_idx = encoder.vocabulary_[AT_TOKEN]
+            elif token.startswith('#') and token not in encoder.vocabulary_:
+                hash_count += 1
+                word_idx = encoder.vocabulary_[HASH_TOKEN]
+            elif token in encoder.vocabulary_:
+                known_count += 1
+                word_idx = encoder.vocabulary_[token]
+            else:
+                unk_count += 1
+                word_idx = unk
+            encoded[row_idx][col_idx] = word_idx
 
+    logging.warning(f"Found {unk_count} unks, {at_count} unknown @s, "
+                    f"{hash_count} unknown hashtags, {known_count} known words.")
     return encoded.astype('int32')
 
 def bpe_encode_data(encoder, text, is_input=False):

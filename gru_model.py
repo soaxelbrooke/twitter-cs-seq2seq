@@ -22,6 +22,7 @@ Seq2SeqConfig = NamedTuple('Seq2SeqParams', (
     ('start_token', str),
     ('encoder_layers', int),
     ('learning_rate', float),
+    ('teacher_force_ratio', float),
 ))
 
 
@@ -55,7 +56,7 @@ class GruModel:
         self.start_idx = start_idx
 
         self.gradient_clip = 5.0
-        self.teacher_force_ratio = 0.5
+        self.teacher_force_ratio = seq2seq_cfg.teacher_force_ratio
         self.learning_rate = seq2seq_cfg.learning_rate
 
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=self.learning_rate)
