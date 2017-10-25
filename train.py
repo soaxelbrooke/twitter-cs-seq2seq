@@ -25,10 +25,12 @@ S2S_PARAMS = Seq2SeqConfig(
     learning_rate=float(os.environ.get('LEARNING_RATE', '0.005')),
 )
 
+LIMIT = int(os.environ.get('LIMIT', '10000000'))
+
 
 def train():
-    x_lines = open('data/x.txt').read().split('\n')
-    y_lines = open('data/y.txt').read().split('\n')
+    x_lines = [*toolz.take(LIMIT, open('data/x.txt').read().split('\n'))]
+    y_lines = [*toolz.take(LIMIT, open('data/y.txt').read().split('\n'))]
 
     encoder = encoder_for_lines(S2S_PARAMS, x_lines + y_lines)
 
