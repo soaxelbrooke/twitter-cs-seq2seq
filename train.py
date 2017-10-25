@@ -15,9 +15,9 @@ import toolz
 
 S2S_PARAMS = Seq2SeqConfig(
     message_len=30,
-    batch_size=256,
+    batch_size=32,
     context_size=200,
-    embed_size=100,
+    embed_size=200,
     use_cuda=True,
     vocab_size=2**13,
     start_token='__start__',
