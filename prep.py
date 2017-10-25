@@ -51,7 +51,11 @@ def write_csv_from_db(out_path: str):
         writer = csv.writer(outfile)
         crs.execute(query)
         writer.writerow(header)
-        writer.writerows(tqdm(crs))
+        for _row in tqdm(crs):
+            row = [*_row]
+            row[2] = row[2].replace('\n', ' ')
+            row[4] = row[4].replace('\n', ' ')
+            writer.writerow(row)
 
 
 if __name__ == '__main__':
