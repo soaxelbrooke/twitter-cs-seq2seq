@@ -102,6 +102,8 @@ class GruModel:
             progress.set_postfix(loss=np.mean(loss_queue), refresh=False)
             progress.update(self.cfg.batch_size)
 
+        if experiment is not None:
+            experiment.log_metric('loss', np.mean(loss_queue))
         return np.mean(loss_queue)
 
     def _train_inner(self, input_var_batch, target_var_batch):
