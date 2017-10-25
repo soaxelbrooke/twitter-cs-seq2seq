@@ -17,8 +17,8 @@ import toolz
 
 
 S2S_PARAMS = Seq2SeqConfig(
-    message_len=20,
-    batch_size=int(os.environ.get('BATCH_SIZE', '32')),
+    message_len=25,
+    batch_size=int(os.environ.get('BATCH_SIZE', '2')),
     context_size=100,
     embed_size=200,
     use_cuda=True,
@@ -32,6 +32,7 @@ S2S_PARAMS = Seq2SeqConfig(
 AT_TOKEN = '<at/>'
 HASH_TOKEN = '<hashtag/>'
 SIGNATURE_TOKEN = '<signature/>'
+PAD_TOKEN = '_'
 
 LIMIT = int(os.environ.get('LIMIT', '10000000'))
 
@@ -44,10 +45,13 @@ def train():
 
     try:
         start_idx = encoder.word_vocab[S2S_PARAMS.start_token]
+        pad_idx = encoder.word_vocab[PAD_TOKEN]
     except AttributeError:
         start_idx = int(encoder.vocabulary_[S2S_PARAMS.start_token])
+        pad_idx = encoder.vocabulary_[PAD_TOKEN]
 
-    model = build_model(S2S_PARAMS, start_idx)
+    reverse_enc = {idx: word for word, idx in encoder.vocabulary_.items()}
+    model = build_model(S2S_PARAMS, start_idx, pad_idx)
 
     x = encode_data(encoder, x_lines, is_input=True)
     y = encode_data(encoder, y_lines, is_input=False)
@@ -71,7 +75,8 @@ def train():
             model.train_epoch(x, y, experiment=experiment)
             experiment.log_epoch_end(idx)
             test_y = model.predict(test_x)
-            print(test_x, test_y)
+            for i in range(min([3, S2S_PARAMS.batch_size])):
+                print('> ' + ' '.join(reverse_enc.get(idx, '<unk/>') for idx in list(test_y[i])))
     else:
         for idx in range(1000):
             print("Training in epoch " + str(idx))
@@ -84,7 +89,7 @@ def sklearn_encoder_for_data(cfg: Seq2SeqConfig, lines):
     signature_regex = re.compile(r'[\*^/][a-z][a-z][a-z]?(?![\*])')
     fixed_lines = [signature_regex.sub(SIGNATURE_TOKEN, text) for text in lines]
     cv.fit(fixed_lines + [cfg.start_token] * 10000 + [AT_TOKEN] * 10000 + [HASH_TOKEN] * 10000
-           + [SIGNATURE_TOKEN] * 10000)
+           + [SIGNATURE_TOKEN] * 10000 + [PAD_TOKEN] * 10000)
     return cv
 
 
@@ -99,7 +104,7 @@ def bpe_encoder_for_lines(cfg: Seq2SeqConfig, lines) -> Encoder:
 
 def sklearn_encode_data(encoder, text, is_input=False):
     encoded = np.ones((len(text), S2S_PARAMS.message_len),
-                      dtype='int32') * (encoder.max_features + 1) # PAD value
+                      dtype='int32') * encoder.vocabulary_[PAD_TOKEN]
     unk = encoder.max_features
 
     unk_count = 0
@@ -127,7 +132,8 @@ def sklearn_encode_data(encoder, text, is_input=False):
             else:
                 unk_count += 1
                 word_idx = unk
-            encoded[row_idx][col_idx] = word_idx
+            _col_idx = S2S_PARAMS.message_len - col_idx - 1 if is_input else col_idx
+            encoded[row_idx][_col_idx] = word_idx
 
     logging.warning(f"{100 * unk_count / (signature_count + at_count + hash_count + known_count)}% "
                     f"OOV")
@@ -135,6 +141,7 @@ def sklearn_encode_data(encoder, text, is_input=False):
                     f"{hash_count} unknown hashtags, {signature_count} unknown signatures, "
                     f"{known_count} known words.")
     return encoded.astype('int32')
+
 
 def bpe_encode_data(encoder, text, is_input=False):
     """ Encode data using provided encoder, for use in training/testing """

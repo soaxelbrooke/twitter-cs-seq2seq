@@ -26,10 +26,10 @@ Seq2SeqConfig = NamedTuple('Seq2SeqParams', (
 ))
 
 
-def build_model(cfg, start_idx):
-    # type: (Seq2SeqConfig, int) -> GruModel
+def build_model(cfg, start_idx, pad_idx):
+    # type: (Seq2SeqConfig, int, int) -> GruModel
     """ Builds a bomb ass model """
-    shared_embedding = build_shared_embedding(cfg)
+    shared_embedding = build_shared_embedding(cfg, pad_idx)
     encoder = GruEncoder(cfg, shared_embedding, 1)
     decoder = GruDecoder(cfg, shared_embedding, 1)
 
@@ -40,10 +40,10 @@ def build_model(cfg, start_idx):
     return GruModel(cfg, encoder, decoder, shared_embedding, start_idx)
 
 
-def build_shared_embedding(cfg):
+def build_shared_embedding(cfg, pad_idx):
     """ Builds embedding to be used by encoder and decoder """
-    # type: Seq2SeqConfig -> nn.Embedding
-    return nn.Embedding(cfg.vocab_size, cfg.embed_size)
+    # type: (Seq2SeqConfig, int) -> nn.Embedding
+    return nn.Embedding(cfg.vocab_size, cfg.embed_size, padding_idx=int(pad_idx))
 
 
 class GruModel:
@@ -166,7 +166,7 @@ class GruModel:
             decoder_input = Variable(top_idxs.squeeze())
             decoder_outputs[input_idx, :] = top_idxs.squeeze()
 
-        return decoder_outputs.numpy()
+        return decoder_outputs.numpy().T
 
     def evaluate(self, test_x, test_y):
         # type: (ndarray, ndarray) -> float
