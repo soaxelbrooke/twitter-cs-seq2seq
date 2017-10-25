@@ -1,5 +1,8 @@
 
 import os
+import re
+import random
+
 USE_COMET = os.environ.get('COMET') == 'TRUE'
 
 if USE_COMET:
@@ -19,7 +22,7 @@ S2S_PARAMS = Seq2SeqConfig(
     context_size=200,
     embed_size=200,
     use_cuda=True,
-    vocab_size=2**13,
+    vocab_size=2**15,
     start_token='<start/>',
     encoder_layers=int(os.environ.get('ENCODER_LAYERS', '2')),
     learning_rate=float(os.environ.get('LEARNING_RATE', '0.005')),
@@ -28,6 +31,7 @@ S2S_PARAMS = Seq2SeqConfig(
 
 AT_TOKEN = '<at/>'
 HASH_TOKEN = '<hashtag/>'
+SIGNATURE_TOKEN = '<signature/>'
 
 LIMIT = int(os.environ.get('LIMIT', '10000000'))
 
@@ -57,6 +61,10 @@ def train():
         experiment = Experiment(api_key="DQqhNiimkjP0gK6c8iGz9orzL", log_code=True)
         experiment.log_multiple_params(S2S_PARAMS._asdict())
         for idx in range(1000):
+            print("Shuffling data...")
+            random_idx = random.sample([*range(len(x))], len(x))
+            x = x[random_idx]
+            y = y[random_idx]
             print("Training in epoch " + str(idx))
             model.train_epoch(x, y, experiment=experiment)
             experiment.log_epoch_end(idx)
@@ -69,7 +77,10 @@ def train():
 def sklearn_encoder_for_data(cfg: Seq2SeqConfig, lines):
     logging.info("Fitting sklearn count vectorizer...")
     cv = CountVectorizer(tokenizer=casual_tokenize, max_features=cfg.vocab_size - 2)
-    cv.fit(lines + [cfg.start_token] * 10000 + [AT_TOKEN] * 10000 + [HASH_TOKEN] * 10000)
+    signature_regex = re.compile(r'[\*^/][a-z][a-z][a-z]?(?![\*])')
+    fixed_lines = [signature_regex.sub(SIGNATURE_TOKEN, text) for text in lines]
+    cv.fit(fixed_lines + [cfg.start_token] * 10000 + [AT_TOKEN] * 10000 + [HASH_TOKEN] * 10000
+           + [SIGNATURE_TOKEN] * 10000)
     return cv
 
 
@@ -88,7 +99,10 @@ def sklearn_encode_data(encoder, text, is_input=False):
     unk_count = 0
     at_count = 0
     hash_count = 0
+    signature_count = 0
     known_count = 0
+
+    signature_regex = re.compile(r'[\*^/][a-z][a-z][a-z]?(?![\*])')
 
     for row_idx, line in enumerate(text):
         for col_idx, token in enumerate(toolz.take(30, encoder.tokenizer(line))):
@@ -98,6 +112,9 @@ def sklearn_encode_data(encoder, text, is_input=False):
             elif token.startswith('#') and token not in encoder.vocabulary_:
                 hash_count += 1
                 word_idx = encoder.vocabulary_[HASH_TOKEN]
+            elif token not in encoder.vocabulary_ and signature_regex.match(token):
+                signature_count += 1
+                word_idx = encoder.vocabulary_[SIGNATURE_TOKEN]
             elif token in encoder.vocabulary_:
                 known_count += 1
                 word_idx = encoder.vocabulary_[token]
@@ -106,8 +123,11 @@ def sklearn_encode_data(encoder, text, is_input=False):
                 word_idx = unk
             encoded[row_idx][col_idx] = word_idx
 
+    logging.warning(f"{100 * unk_count / (signature_count + at_count + hash_count + known_count)}% "
+                    f"OOV")
     logging.warning(f"Found {unk_count} unks, {at_count} unknown @s, "
-                    f"{hash_count} unknown hashtags, {known_count} known words.")
+                    f"{hash_count} unknown hashtags, {signature_count} unknown signatures, "
+                    f"{known_count} known words.")
     return encoded.astype('int32')
 
 def bpe_encode_data(encoder, text, is_input=False):
