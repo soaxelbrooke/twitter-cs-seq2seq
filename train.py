@@ -57,6 +57,8 @@ def train():
     x = x[:S2S_PARAMS.batch_size*int(len(x)/S2S_PARAMS.batch_size)]
     y = y[:S2S_PARAMS.batch_size*int(len(y)/S2S_PARAMS.batch_size)]
 
+    test_x = x[:S2S_PARAMS.batch_size]
+
     if USE_COMET:
         experiment = Experiment(api_key="DQqhNiimkjP0gK6c8iGz9orzL", log_code=True)
         experiment.log_multiple_params(S2S_PARAMS._asdict())
@@ -68,6 +70,8 @@ def train():
             print("Training in epoch " + str(idx))
             model.train_epoch(x, y, experiment=experiment)
             experiment.log_epoch_end(idx)
+            test_y = model.predict(test_x)
+            print(test_x, test_y)
     else:
         for idx in range(1000):
             print("Training in epoch " + str(idx))
@@ -86,7 +90,8 @@ def sklearn_encoder_for_data(cfg: Seq2SeqConfig, lines):
 
 def bpe_encoder_for_lines(cfg: Seq2SeqConfig, lines) -> Encoder:
     """ Calculate BPE encoder for provided lines of text """
-    encoder = Encoder(vocab_size=cfg.vocab_size, required_tokens=[cfg.start_token, AT_TOKEN])
+    encoder = Encoder(vocab_size=cfg.vocab_size,
+                      required_tokens=[cfg.start_token, AT_TOKEN, HASH_TOKEN, SIGNATURE_TOKEN])
     encoder.fit(lines)
     encoder.save('latest_encoder.json')
     return encoder

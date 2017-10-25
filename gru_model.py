@@ -142,6 +142,32 @@ class GruModel:
 
         return loss.data.sum() / self.cfg.message_len
 
+    def predict(self, requests):
+        """ Predict a response for this request """
+        # type: (ndarray) -> ndarray
+        x = torch.LongTensor(requests.astype('int64')).view(-1, self.cfg.batch_size)
+
+        if self.cfg.use_cuda:
+            x = x.cuda()
+
+        encoder_outputs, decoder_hidden = self.encoder(Variable(x), self.encoder.init_hidden())
+        decoder_input = Variable(torch.LongTensor([[self.start_idx]] * self.cfg.batch_size))
+        decoder_outputs = \
+            torch.LongTensor([[self.start_idx]] * self.cfg.batch_size * self.cfg.message_len)\
+                .view(self.cfg.message_len, self.cfg.batch_size)
+
+        if self.cfg.use_cuda:
+            decoder_input = decoder_input.cuda()
+
+        should_use_teacher = self.teacher_should_force()
+        for input_idx in range(self.cfg.message_len):
+            decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+            top_vals, top_idxs = decoder_output.data.topk(1)
+            decoder_input = Variable(top_idxs.squeeze())
+            decoder_outputs[input_idx, :] = top_idxs.squeeze()
+
+        return decoder_outputs.numpy()
+
     def evaluate(self, test_x, test_y):
         # type: (ndarray, ndarray) -> float
         """ Evaluates model quality on test dataset, returning loss. """
@@ -169,7 +195,7 @@ class GruEncoder(nn.Module):
         return out[-1].unsqueeze(0), hidden[-1].unsqueeze(0)
 
     def init_hidden(self):
-        hidden = Variable(torch.randn(self.n_layers, self.cfg.batch_size, self.cfg.context_size))
+        hidden = Variable(torch.zeros(self.n_layers, self.cfg.batch_size, self.cfg.context_size))
         return hidden.cuda() if self.cfg.use_cuda else hidden
 
 
