@@ -21,6 +21,7 @@ Seq2SeqConfig = NamedTuple('Seq2SeqParams', (
     ('vocab_size', int),
     ('start_token', str),
     ('encoder_layers', int),
+    ('learning_rate', float),
 ))
 
 
@@ -55,7 +56,7 @@ class GruModel:
 
         self.gradient_clip = 5.0
         self.teacher_force_ratio = 0.5
-        self.learning_rate = 0.001
+        self.learning_rate = seq2seq_cfg.learning_rate
 
         self.encoder_optimizer = optim.Adam(self.encoder.parameters(), lr=self.learning_rate)
         self.decoder_optimizer = optim.Adam(self.decoder.parameters(), lr=self.learning_rate)
@@ -68,7 +69,7 @@ class GruModel:
         # type: (ndarray, ndarray) -> float
         """ Trains a single epoch. Returns training loss. """
         progress = tqdm(total=len(train_x))
-        loss_queue = deque(maxlen=100)
+        loss_queue = deque(maxlen=1000)
         train_x = train_x.astype('int64')
         train_y = train_y.astype('int64')
         idx_iter = zip(range(0, len(train_x) - self.cfg.batch_size, self.cfg.batch_size),
